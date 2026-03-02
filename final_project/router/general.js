@@ -58,13 +58,7 @@ public_users.get('/title/:title', function (req, res) {
   }
 });
 
-// Get all books based on title
-public_users.get('/title/:title',function (req, res) {
-  //Write your code here
-  return res.status(300).json({message: "Yet to be implemented"});
-});
-
-//  Get book review
+//  Task 5
 public_users.get('/review/:isbn', function (req, res) {
   const isbn = req.params.isbn;
 
@@ -73,6 +67,26 @@ public_users.get('/review/:isbn', function (req, res) {
   } else {
     return res.status(404).json({ message: "Book not found" });
   }
+});
+
+// Task 6
+public_users.post("/register", (req, res) => {
+  const { username, password } = req.body;
+
+  // Check if username and password are provided
+  if (!username || !password) {
+    return res.status(400).json({ message: "Username and password are required" });
+  }
+
+  // Check if username already exists
+  if (!isValid(username)) {
+    return res.status(409).json({ message: "Username already exists" });
+  }
+
+  // Add new user
+  users.push({ username: username, password: password });
+
+  return res.status(200).json({ message: "User successfully registered. Now you can login" });
 });
 
 module.exports.general = public_users;
