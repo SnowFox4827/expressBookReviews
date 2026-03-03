@@ -5,24 +5,101 @@ const regd_users = express.Router();
 
 let users = [];
 
-const isValid = (username)=>{ //returns boolean
-//write code to check is the username is valid
-}
+// Check if username exists
+const isValid = (username) => {
+  return users.some(user => user.username === username);
+};
 
-const authenticatedUser = (username,password)=>{ //returns boolean
-//write code to check if username and password match the one we have in records.
-}
+// Check if username and password match
+const authenticatedUser = (username, password) => {
+  return users.some(user =>
+    user.username === username && user.password === password
+  );
+};
 
-//only registered users can login
-regd_users.post("/login", (req,res) => {
-  //Write your code here
-  return res.status(300).json({message: "Yet to be implemented"});
+// ================= LOGIN =================
+// Endpoint: customer/login
+regd_users.post("/login", (req, res) => {
+
+  const { username, password } = req.body;
+
+  if (!username || !password) {
+    return res.status(400).json({ message: "Username and password required" });
+  }
+
+  if (!authenticatedUser(username, password)) {
+    return res.status(401).json({ message: "Invalid login credentials" });
+  }
+
+  // Generate JWT (1 hour expiration)
+  const accessToken = jwt.sign(
+    { data: username },
+    "access",
+    { expiresIn: 60 * 60 }
+  );
+
+  // Save to session
+  req.session.authorization = {
+    accessToken,
+    username
+  };
+
+  return res.status(200).json({
+    message: "User successfully logged in",
+    token: accessToken
+  });
 });
 
-// Add a book review
+// ================= ADD / MODIFY REVIEW =================
 regd_users.put("/auth/review/:isbn", (req, res) => {
-  //Write your code here
-  return res.status(300).json({message: "Yet to be implemented"});
+
+  const isbn = req.params.isbn;
+  const review = req.query.review;
+  const username = req.session.authorization.username;
+
+  if (!review) {
+    return res.status(400).json({ message: "Review text is required" });
+  }
+
+  if (!books[isbn]) {
+    return res.status(404).json({ message: "Book not found" });
+  }
+
+  // Initialize reviews object if it doesn't exist
+  if (!books[isbn].reviews) {
+    books[isbn].reviews = {};
+  }
+
+  // Add or update review under logged-in username
+  books[isbn].reviews[username] = review;
+
+  return res.status(200).json({
+    message: "Review added/updated successfully",
+    reviews: books[isbn].reviews
+  });
+});
+
+// ================= DELETE REVIEW =================
+regd_users.delete("/auth/review/:isbn", (req, res) => {
+
+  const isbn = req.params.isbn;
+  const username = req.session.authorization.username;
+
+  if (!books[isbn]) {
+    return res.status(404).json({ message: "Book not found" });
+  }
+
+  if (!books[isbn].reviews || !books[isbn].reviews[username]) {
+    return res.status(404).json({ message: "No review found for this user" });
+  }
+
+  // Delete only the logged-in user's review
+  delete books[isbn].reviews[username];
+
+  return res.status(200).json({
+    message: "Review deleted successfully",
+    reviews: books[isbn].reviews
+  });
 });
 
 module.exports.authenticated = regd_users;
